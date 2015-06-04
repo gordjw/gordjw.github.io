@@ -54,6 +54,8 @@ define('WP_CONTENT_DIR', '/data/www/wp-content');
 Your themes should start to come back, but you'll notice on the frontend that no styles, scripts or images will load.
 That's because <code>WP_CONTENT_DIR</code> only works for PHP files. WP still doesn't know where the client side assets are.
 
+We need to also set <code>WP_CONTENT_URL</code>.
+
 {% highlight php %}
 if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https')
     $_SERVER['HTTPS'] = 'on';
