@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>gordjw</title>
+    <description>Wakka wakka
+</description>
+    <link>http://gordjw.github.io/</link>
+    <atom:link href="http://gordjw.github.io/feed.xml" rel="self" type="application/rss+xml" />
+    <pubDate>Thu, 04 Jun 2015 23:43:16 +1000</pubDate>
+    <lastBuildDate>Thu, 04 Jun 2015 23:43:16 +1000</lastBuildDate>
+    <generator>Jekyll v2.5.3</generator>
+    
+      <item>
+        <title>moving wp-content</title>
+        <description>&lt;h1&gt;Moving the wp-content folder&lt;/h1&gt;
+
+&lt;p&gt;If you&amp;#39;ve ever run a WordPress installation that uses any kind of deployment tool, you&amp;#39;ll know how annoying it is that wp-content sits inside your webroot.&lt;/p&gt;
+
+&lt;p&gt;I use plain old &lt;code&gt;svn up&lt;/code&gt; combined with svn:ignore, and that works well enough. But with 4 installations and more on the way, patching them gets pretty tedious, and you&amp;#39;ve got to remember to get rid of the wp-content directory that comes with the latest WordPress core update.&lt;/p&gt;
+
+&lt;p&gt;If only there was some way that wp-content, and all of that non-upgrade-friendly user content, could be moved outside of the WordPress core.&lt;/p&gt;
+
+&lt;h2&gt;Roots, rocks and sage&lt;/h2&gt;
+
+&lt;p&gt;The guys at Roots have created Bedrock, which seems pretty well thought out.&lt;/p&gt;
+
+&lt;p&gt;Bedrock separates wp-content and core WordPress, it has support for multiple environments, and some kind of deployinator, among a whole bunch of other stuff.&lt;/p&gt;
+
+&lt;p&gt;It&amp;#39;s overkill for what I need though, and one drawback is that wp-config.php sits inside your webroot. It has to, because of the way their folder structure is, and because of WordPress&amp;#39; requirements for the location of wp-config.php. Sure, you can block access to wp-config with nginx rules, but I&amp;#39;d rather not risk it.&lt;/p&gt;
+
+&lt;h2&gt;D.I.Y.&lt;/h2&gt;
+
+&lt;p&gt;Inspired by Bedrock, but wanting to cut back to the bare minimum, and to get rid of wp-config.php from the webroot, I set out to build my own mousetrap.&lt;/p&gt;
+
+&lt;p&gt;Your directory structure will end up looking like:&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;/data/www/web
+
+/data/www/wp-content
+
+/data/www/wp-config.php&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The first part&amp;#39;s pretty easy, move wp-content out of the WordPress webroot.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;mv /data/www/web/wp-content /data/www/&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If you refresh your WP site now, it&amp;#39;ll all be broken, although the backend will largely still work.&lt;/p&gt;
+
+&lt;p&gt;Next, tell WordPress where your wp-content folder is now.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;vi /data/www/wp-config.php
+define&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;&amp;#39;WP_CONTENT_DIR&amp;#39;&lt;/span&gt;, &lt;span class=&quot;s1&quot;&gt;&amp;#39;/data/www/wp-content&amp;#39;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Your themes should start to come back, but you&amp;#39;ll notice on the frontend that no styles, scripts or images will load.
+That&amp;#39;s because &lt;code&gt;WP&lt;em&gt;CONTENT&lt;/em&gt;DIR&lt;/code&gt; only works for PHP files. WP still doesn&amp;#39;t know where the client side assets are.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-php&quot; data-lang=&quot;php&quot;&gt;&lt;span class=&quot;x&quot;&gt;if (isset($_SERVER[&amp;#39;HTTP_X_FORWARDED_PROTO&amp;#39;]) &amp;amp;&amp;amp; $_SERVER[&amp;#39;HTTP_X_FORWARDED_PROTO&amp;#39;] == &amp;#39;https&amp;#39;)&lt;/span&gt;
+&lt;span class=&quot;x&quot;&gt;    $_SERVER[&amp;#39;HTTPS&amp;#39;] = &amp;#39;on&amp;#39;;&lt;/span&gt;
+
+
+&lt;span class=&quot;x&quot;&gt;// is_ssl doesn&amp;#39;t always work, e.g. behind load balancers&lt;/span&gt;
+&lt;span class=&quot;x&quot;&gt;if((isset($_SERVER[&amp;#39;HTTPS&amp;#39;]) &amp;amp;&amp;amp; $_SERVER[&amp;#39;HTTPS&amp;#39;] == &amp;#39;on&amp;#39;) || is_ssl())&lt;/span&gt;
+&lt;span class=&quot;x&quot;&gt;  define(&amp;#39;WP_CONTENT_URL&amp;#39;, &amp;#39;https://&amp;#39; . $_SERVER[&amp;#39;HTTP_HOST&amp;#39;] . &amp;#39;/wp-content&amp;#39;);&lt;/span&gt;
+&lt;span class=&quot;x&quot;&gt;else&lt;/span&gt;
+&lt;span class=&quot;x&quot;&gt;  define(&amp;#39;WP_CONTENT_URL&amp;#39;, &amp;#39;http://&amp;#39; . $_SERVER[&amp;#39;HTTP_HOST&amp;#39;] . &amp;#39;/wp-content&amp;#39;);&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We do a couple of SSL checks to make sure we use the right scheme, and then we tell WP that it should be looking for client side assets in /wp-content.&lt;/p&gt;
+
+&lt;p&gt;First snag!&lt;/p&gt;
+
+&lt;p&gt;I use nginx, so the config given is for that, but Apache config will use the same principles.&lt;/p&gt;
+
+&lt;p&gt;The problem is that the webroot is /data/www/web&lt;/p&gt;
+
+&lt;p&gt;Previously, when wp-content lived in /data/www/web/wp-content, this was fine!&lt;/p&gt;
+
+&lt;p&gt;But we&amp;#39;ve moved it out of the webroot now, to have some separation of concerns, so nginx won&amp;#39;t be able to find anything.&lt;/p&gt;
+
+&lt;p&gt;Solution: add a location block and an alias to tell nginx where we moved wp-content to.&lt;/p&gt;
+
+&lt;p&gt;Put this in the server block of your nginx config.&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;location ^~ /wp-content/ &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;alias&lt;/span&gt; /data/www/wp-content/&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;break&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;That&amp;#39;s it! Pretty simple stuff.&lt;/p&gt;
+
+&lt;p&gt;We&amp;#39;re now able to update WordPress core without overwriting any user content. In fact, you could delete the whole web folder, redownload WordPress, and it would be fine. I&amp;#39;d recommend using git instead of doing that, but you could if you wanted.&lt;/p&gt;
+
+&lt;p&gt;wp-config is still outside the webroot, so nobody will be able to access it through nginx. Your super secret DB password is safe!&lt;/p&gt;
+
+&lt;p&gt;This config will help you scale easily too. You could host the WP core on a fileshare, and mount it on all your webservers. Then, you&amp;#39;d just need to update the copy on the fileshare once, and voila, all your sites are updated instantly and without any disruption.&lt;/p&gt;
+</description>
+        <pubDate>Thu, 04 Jun 2015 21:02:25 +1000</pubDate>
+        <link>http://gordjw.github.io/wordpress/2015/06/04/wp-content.html</link>
+        <guid isPermaLink="true">http://gordjw.github.io/wordpress/2015/06/04/wp-content.html</guid>
+        
+        
+        <category>wordpress</category>
+        
+      </item>
+    
+  </channel>
+</rss>

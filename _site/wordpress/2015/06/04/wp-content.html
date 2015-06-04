@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>moving wp-content</title>
+  <meta name="description" content="Wakka wakka
+" />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="canonical" href="http://gordjw.github.io/wordpress/2015/06/04/wp-content.html">
+
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+<!--  <link rel="stylesheet" href=""> -->
+  <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css" />
+</head>
+
+  <body itemscope itemtype="http://schema.org/Article">
+    <!-- header start -->
+
+<a href="http://gordjw.github.io" class="logo-readium"><span class="logo" style="background-image: url(/assets/images/gw_logo.jpg)"></span></a>
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="article-image">
+          <div class="post-image-image" style="background-image: url(/assets/article_images/2014-11-30-mediator_features/night-track.JPG)">
+            Article Image
+          </div>
+          <div class="post-meta">
+            <h1 class="post-title">moving wp-content</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/assets/images/gw_logo.jpg)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person">Gordon Williamson</h4>
+              on
+              <time datetime="2015-06-04 21:02">04 Jun 2015</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+            <div style="text-align:center">
+              <a href="#topofpage" class="topofpage"><i class="fa fa-angle-down"></i></a>
+            </div>
+          </div>
+        </div>
+        
+        <section class="post-content">
+          <div class="post-reading">
+            <span class="post-reading-time"></span> read
+          </div>
+          <a name="topofpage"></a>
+          <h1>Moving the wp-content folder</h1>
+
+<p>If you&#39;ve ever run a WordPress installation that uses any kind of deployment tool, you&#39;ll know how annoying it is that wp-content sits inside your webroot.</p>
+
+<p>I use plain old <code>svn up</code> combined with svn:ignore, and that works well enough. But with 4 installations and more on the way, patching them gets pretty tedious, and you&#39;ve got to remember to get rid of the wp-content directory that comes with the latest WordPress core update.</p>
+
+<p>If only there was some way that wp-content, and all of that non-upgrade-friendly user content, could be moved outside of the WordPress core.</p>
+
+<h2>Roots, rocks and sage</h2>
+
+<p>The guys at Roots have created Bedrock, which seems pretty well thought out.</p>
+
+<p>Bedrock separates wp-content and core WordPress, it has support for multiple environments, and some kind of deployinator, among a whole bunch of other stuff.</p>
+
+<p>It&#39;s overkill for what I need though, and one drawback is that wp-config.php sits inside your webroot. It has to, because of the way their folder structure is, and because of WordPress&#39; requirements for the location of wp-config.php. Sure, you can block access to wp-config with nginx rules, but I&#39;d rather not risk it.</p>
+
+<h2>D.I.Y.</h2>
+
+<p>Inspired by Bedrock, but wanting to cut back to the bare minimum, and to get rid of wp-config.php from the webroot, I set out to build my own mousetrap.</p>
+
+<p>Your directory structure will end up looking like:</p>
+
+<div class="highlight"><pre><code class="language-bash" data-lang="bash">/data/www/web
+
+/data/www/wp-content
+
+/data/www/wp-config.php</code></pre></div>
+
+<p>The first part&#39;s pretty easy, move wp-content out of the WordPress webroot.</p>
+
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>mv /data/www/web/wp-content /data/www/</code></pre></div>
+
+<p>If you refresh your WP site now, it&#39;ll all be broken, although the backend will largely still work.</p>
+
+<p>Next, tell WordPress where your wp-content folder is now.</p>
+
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>vi /data/www/wp-config.php
+define<span class="o">(</span><span class="s1">&#39;WP_CONTENT_DIR&#39;</span>, <span class="s1">&#39;/data/www/wp-content&#39;</span><span class="o">)</span><span class="p">;</span></code></pre></div>
+
+<p>Your themes should start to come back, but you&#39;ll notice on the frontend that no styles, scripts or images will load.
+That&#39;s because <code>WP<em>CONTENT</em>DIR</code> only works for PHP files. WP still doesn&#39;t know where the client side assets are.</p>
+
+<div class="highlight"><pre><code class="language-php" data-lang="php"><span class="x">if (isset($_SERVER[&#39;HTTP_X_FORWARDED_PROTO&#39;]) &amp;&amp; $_SERVER[&#39;HTTP_X_FORWARDED_PROTO&#39;] == &#39;https&#39;)</span>
+<span class="x">    $_SERVER[&#39;HTTPS&#39;] = &#39;on&#39;;</span>
+
+
+<span class="x">// is_ssl doesn&#39;t always work, e.g. behind load balancers</span>
+<span class="x">if((isset($_SERVER[&#39;HTTPS&#39;]) &amp;&amp; $_SERVER[&#39;HTTPS&#39;] == &#39;on&#39;) || is_ssl())</span>
+<span class="x">  define(&#39;WP_CONTENT_URL&#39;, &#39;https://&#39; . $_SERVER[&#39;HTTP_HOST&#39;] . &#39;/wp-content&#39;);</span>
+<span class="x">else</span>
+<span class="x">  define(&#39;WP_CONTENT_URL&#39;, &#39;http://&#39; . $_SERVER[&#39;HTTP_HOST&#39;] . &#39;/wp-content&#39;);</span></code></pre></div>
+
+<p>We do a couple of SSL checks to make sure we use the right scheme, and then we tell WP that it should be looking for client side assets in /wp-content.</p>
+
+<p>First snag!</p>
+
+<p>I use nginx, so the config given is for that, but Apache config will use the same principles.</p>
+
+<p>The problem is that the webroot is /data/www/web</p>
+
+<p>Previously, when wp-content lived in /data/www/web/wp-content, this was fine!</p>
+
+<p>But we&#39;ve moved it out of the webroot now, to have some separation of concerns, so nginx won&#39;t be able to find anything.</p>
+
+<p>Solution: add a location block and an alias to tell nginx where we moved wp-content to.</p>
+
+<p>Put this in the server block of your nginx config.</p>
+
+<div class="highlight"><pre><code class="language-bash" data-lang="bash">location ^~ /wp-content/ <span class="o">{</span>
+    <span class="nb">alias</span> /data/www/wp-content/<span class="p">;</span>
+    <span class="nb">break</span><span class="p">;</span>
+  <span class="o">}</span></code></pre></div>
+
+<p>That&#39;s it! Pretty simple stuff.</p>
+
+<p>We&#39;re now able to update WordPress core without overwriting any user content. In fact, you could delete the whole web folder, redownload WordPress, and it would be fine. I&#39;d recommend using git instead of doing that, but you could if you wanted.</p>
+
+<p>wp-config is still outside the webroot, so nobody will be able to access it through nginx. Your super secret DB password is safe!</p>
+
+<p>This config will help you scale easily too. You could host the WP core on a fileshare, and mount it on all your webservers. Then, you&#39;d just need to update the copy on the fileshare once, and voila, all your sites are updated instantly and without any disruption.</p>
+
+        </section>
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+                <a class="icon-twitter" href="http://twitter.com/share?text=moving+wp-content&amp;url=http://gordjw.github.io/wordpress/2015/06/04/wp-content"
+                  onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
+                <i class="fa fa-twitter"></i><span class="hidden">twitter</span>
+                </a>
+              
+            
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/assets/images/gw_logo.jpg)">Blog Logo</div>
+              <h4>Gordon Williamson</h4>
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2015-06-04 21:02">04 Jun 2015</time></p>
+            </section>
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Supported by</span></h5>
+            <footer class="site-footer">
+              <section class="poweredby">Proudly published with <a href="http://jekyllrb.com"> Jekyll</a></section>
+              <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> You should subscribe to my feed.</span></a>
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Gordon Williamson</a> &copy; 2015<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image"  style="background-image: url(/assets/images/cA4aKEIPQrerBnp1yGHv_IMG_9534-3-2.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">gordjw</h1>
+        <h2 class="blog-description">Wakka wakka
+</h2>
+        <a href="/" class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/assets/js/index.js"></script>
+<script type="text/javascript" src="/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    
+      $window.on('scroll', function() {
+        var top = $window.scrollTop();
+
+        if (top < 0 || top > 1500) { return; }
+        $image
+          .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+          .css('opacity', 1-Math.max(top/700, 0));
+      });
+      $window.trigger('scroll');
+
+      var height = $('.article-image').height();
+      $('.post-content').css('padding-top', height + 'px');
+
+      $('a[href*=#]:not([href=#])').click(function() {
+        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+         && location.hostname == this.hostname) {
+          var target = $(this.hash);
+          target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+          if (target.length) {
+            $('html,body').animate({ scrollTop: target.offset().top }, 500);
+            return false;
+          }
+        }
+      });
+
+  });
+}(jQuery));
+</script>
+
+
+  </body>
+</html>
