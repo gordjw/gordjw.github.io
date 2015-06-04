@@ -102,5 +102,6 @@ This config will help you scale easily too. You could host the WP core on a file
 
 If you want to look at the whole config files, here you go:
 
-- https://gist.github.com/gordjw/3db7bf513fbd51843ce6
-- https://gist.github.com/gordjw/eedcdbf3e556aa729f35
+{% gist 3db7bf513fbd51843ce6 %}
+
+{% gist eedcdbf3e556aa729f35 %}
