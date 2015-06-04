@@ -98,3 +98,9 @@ We're now able to update WordPress core without overwriting any user content. In
 wp-config is still outside the webroot, so nobody will be able to access it through nginx. Your super secret DB password is safe!
 
 This config will help you scale easily too. You could host the WP core on a fileshare, and mount it on all your webservers. Then, you'd just need to update the copy on the fileshare once, and voila, all your sites are updated instantly and without any disruption.
+
+
+If you want to look at the whole config files, here you go:
+
+- https://gist.github.com/gordjw/3db7bf513fbd51843ce6
+- https://gist.github.com/gordjw/eedcdbf3e556aa729f35
